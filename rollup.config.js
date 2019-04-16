@@ -7,6 +7,7 @@ import cssnano from 'cssnano';
 
 
 const packages = require('./package.json');
+const componentsDir = resolve( __dirname, 'src/components');
 
 
 module.exports = {
@@ -44,6 +45,22 @@ module.exports = {
               done(`export default ${ css }`);
             });
           });
+        });
+      }
+    },
+    {
+      name: '去除 HTML 缩进',
+      load: function( id ){
+        if( id.startsWith( componentsDir ) ) return new Promise( async resolve => {
+          let data = await fs.readFile( id, 'utf-8' );
+
+          data = data.replace( /<([^>]+)>\s+<([^>]+)>/g, '<$1><$2>' );
+          data = data.replace( /<([^>]+)>\s+<([^>]+)>/g, '<$1><$2>' );
+          data = data.replace( /`\s+<([^>]+)>/g, '`<$1>' );
+          data = data.replace( /<([^>]+)>\s+`/g, '<$1>`' );
+          data = data.replace( /\s*<([^>]+)>\s*/g, '<$1>' );
+
+          resolve( data );
         });
       }
     }
