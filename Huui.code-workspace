@@ -17,6 +17,7 @@
       "src": true,
       "LICENSE": true,
       "jsconfig.json": true,
+      "package-lock.json": true,
       "Huui.code-workspace": true,
       ".gitignore": true
     },
