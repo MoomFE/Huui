@@ -1,0 +1,26 @@
+{
+  "name": "@moomfe/huui",
+  "version": "1.0.0",
+  "description": "",
+  "keywords": [
+    "Web Components",
+    "Proxy",
+    "MVVM",
+    "hu",
+    "huui"
+  ],
+  "title": "Huui.js",
+  "author": "Wei Zhang",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+git+https://github.com/MoomFE/Huui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MoomFE/Huui/issues"
+  },
+  "homepage": "https://github.com/MoomFE/Huui",
+  "scripts": {},
+  "devDependencies": {},
+  "dependencies": {}
+}

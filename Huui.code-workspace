@@ -1,0 +1,26 @@
+{
+	"folders": [
+    {
+      "path": "."
+    },
+    {
+      "path": "dist"
+    },
+    {
+      "path": "src"
+    }
+  ],
+	"settings": {
+    "files.exclude": {
+      "node_modules": true,
+      "dist": true,
+      "src": true,
+      "LICENSE": true,
+      "jsconfig.json": true,
+      "Huui.code-workspace": true,
+      ".gitignore": true
+    },
+		"editor.tabSize": 2,
+    "editor.detectIndentation": false
+	}
+}
