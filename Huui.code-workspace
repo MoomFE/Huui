@@ -4,6 +4,9 @@
       "path": "."
     },
     {
+      "path": "test"
+    },
+    {
       "path": "dist"
     },
     {
@@ -13,6 +16,7 @@
 	"settings": {
     "files.exclude": {
       "node_modules": true,
+      "test": true,
       "dist": true,
       "src": true,
       "LICENSE": true,
