@@ -12,7 +12,7 @@ Hu.define( 'hu-gradient-text', {
   props: {
     from: {
       type: String,
-      default: '#6B8E23'
+      default: '#279f76'
     },
     to: {
       type: String,
