@@ -4,8 +4,8 @@
 
   &::before{
     content: attr( text );
-    color: transparent;
     white-space: nowrap;
+    color: transparent;
   }
 
   > svg{
