@@ -26,9 +26,9 @@ Hu.define( 'hu-gradient-text', {
       const hu = this;
 
       return html`
-        <span text=${ hu.text }>
+        <div text=${ hu.text }>
           ${ hu.svg }
-        </span>
+        </div>
       `;
     }
   }),

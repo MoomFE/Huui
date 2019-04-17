@@ -1,4 +1,5 @@
-span{
+:host > div{
+  display: inline-block;
   position: relative;
 
   &::before{
