@@ -6,12 +6,11 @@
  * Released under the MIT License.
  */
 
-(function (factory) {
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define(factory) :
-  factory();
-}(function () { 'use strict';
-
-  var css = ":host>div{display:inline-block;position:relative}:host>div:before{content:attr(text);white-space:nowrap;color:transparent}:host>div>svg{width:100%;height:100%;position:absolute;top:0;left:0}";
+  (global = global || self, global.Huui = factory());
+}(this, function () { 'use strict';
 
   const {
     apply,
@@ -30,6 +29,17 @@
     // setPrototypeOf
   } = Reflect;
 
+  const {
+    create,
+    assign
+  } = Object;
+
+  function create$1(){
+    return apply( assign, null, [
+      create( null ), ...arguments
+    ]);
+  }
+
   var render = options => function( html ){
     const result = [];
 
@@ -43,6 +53,31 @@
 
     return result;
   };
+
+  var util = create$1({
+    create: create$1,
+    render
+  });
+
+  const Huui = create$1({
+    util
+  });
+
+  const inBrowser = typeof window !== 'undefined';
+
+  const otherHuui = inBrowser ? window.Huui
+                              : undefined;
+
+  Huui.noConflict = () => {
+    if( inBrowser && window.Huui === Huui ) window.Huui = otherHuui;
+    return Huui;
+  };
+
+  if( inBrowser ){
+    window.Huui = Huui;
+  }
+
+  var css = ":host>div{display:inline-block;position:relative}:host>div:before{content:attr(text);white-space:nowrap;color:transparent}:host>div>svg{width:100%;height:100%;position:absolute;top:0;left:0}";
 
   const {
     html
@@ -80,5 +115,7 @@
       }
     }
   });
+
+  return Huui;
 
 }));
