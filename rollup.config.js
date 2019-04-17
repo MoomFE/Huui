@@ -10,6 +10,31 @@ const packages = require('./package.json');
 const componentsDir = resolve( __dirname, 'src/components');
 
 
+{
+  const from = 'node_modules/@webcomponents/webcomponentsjs';
+  const to = 'test/Lib';
+
+  // 拷贝最新的 polyfill 加载器到测试文件夹中
+  fs.copy( `${ from }/webcomponents-loader.js`, `${ to }/webcomponents-loader.js`, {
+    overwrite: true
+  });
+
+  // 拷贝最新的 polyfill 到测试文件夹中
+  fs.readdir( `${ from }/bundles`, ( err, files ) => {
+    files.forEach( name => {
+      /\.js$/.test( name ) && fs.copy( `${ from }/bundles/${ name }`, `${ to }/bundles/${ name }`, {
+        overwrite: true
+      });
+    });
+  });
+
+  // 拷贝最新的 Hu 类库文件到测试文件夹中
+  fs.copy( `node_modules/@moomfe/hu/dist/hu.js`, `${ to }/hu.js`, {
+    overwrite: true
+  });
+}
+
+
 module.exports = {
   input: 'src/build/index.js',
   output: {
@@ -62,6 +87,12 @@ module.exports = {
 
           resolve( data );
         });
+      }
+    },
+    {
+      name: '拷贝一份副本给测试用',
+      writeBundle( bundle ){
+        fs.writeFileSync( 'test/Lib/huui.js', bundle['huui.js'].code, 'utf-8' );
       }
     }
   ]
