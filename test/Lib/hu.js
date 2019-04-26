@@ -1,5 +1,5 @@
 /*!
- * Hu.js v1.0.0-bata.3
+ * Hu.js v1.0.0-bata.4
  * https://github.com/MoomFE/Hu
  * 
  * (c) 2018-present Wei Zhang
@@ -1504,6 +1504,26 @@
           return template;
       }
   }
+  /**
+   * A TemplateResult for SVG fragments.
+   *
+   * This class wraps HTMl in an `<svg>` tag in order to parse its contents in the
+   * SVG namespace, then modifies the template to remove the `<svg>` tag so that
+   * clones only container the original fragment.
+   */
+  class SVGTemplateResult extends TemplateResult {
+      getHTML() {
+          return `<svg>${super.getHTML()}</svg>`;
+      }
+      getTemplateElement() {
+          const template = super.getTemplateElement();
+          const content = template.content;
+          const svgElement = content.firstChild;
+          content.removeChild(svgElement);
+          reparentNodes(content, svgElement.firstChild);
+          return template;
+      }
+  }
 
   /**
    * @license
@@ -2381,10 +2401,24 @@
 
       // 有这个计算属性
       if( computedOptions ){
+        const watcher = computedOptions.watcher;
+
         // 清空依赖
-        computedOptions.watcher.clean();
+        watcher.clean();
         // 删除计算属性
         computedOptionsMap.delete( name );
+        // 如果当前 ( 计算属性 / watch ) 在异步更新队列中, 则进行删除
+        if( queueMap.has( watcher ) ){
+          // 从异步更新队列标记中删除
+          queueMap.delete( watcher );
+          // 从异步更新队列中删除
+          for( let i = index + 1, len = queue.length; i < len; i++ ){
+            if( queue[ i ] === watcher ){
+              queue.splice( i, 1 );
+              break;
+            }
+          }
+        }
       }
     };
   }
@@ -2629,11 +2663,13 @@
     watch( this, options, elem, 'value' );
     // 监听控件值改变
     addEventListener( elem, 'change', event => {
-      const [ proxy, name ] = options;
-      const value = filter.call( elem.options, option => option.selected )
-                          .map( option => option.value );
+      if( options.length ){
+        const [ proxy, name ] = options;
+        const value = filter.call( elem.options, option => option.selected )
+                            .map( option => option.value );
 
-      proxy[ name ] = elem.multiple ? value : value[0];
+        proxy[ name ] = elem.multiple ? value : value[0];
+      }
     });
   }
 
@@ -2642,8 +2678,10 @@
     watch( this, options, elem, 'checked' );
     // 监听控件值改变
     addEventListener( elem, 'change', event => {
-      const [ proxy, name ] = this.options;
-      proxy[ name ] = elem.checked;
+      if( options.length ){
+        const [ proxy, name ] = options;
+        proxy[ name ] = elem.checked;
+      }
     });
   }
 
@@ -2654,8 +2692,10 @@
     });
     // 监听控件值改变
     addEventListener( elem, 'change', event => {
-      const [ proxy, name ] = this.options;
-      proxy[ name ] = getAttribute( elem, 'value' ) || null;
+      if( options.length ){
+        const [ proxy, name ] = this.options;
+        proxy[ name ] = getAttribute( elem, 'value' ) || null;
+      }
     });
   }
 
@@ -2712,6 +2752,18 @@
 
       isEqual( value, oldValue ) || (
         this.elem.innerHTML = value
+      );
+    }
+
+  }
+
+  class ShowDirective extends TextDirective{
+
+    commit(){
+      const { value, oldValue } = this;
+
+      isEqual( value, oldValue ) || (
+        this.elem.style.display = value ? '' : 'none'
       );
     }
 
@@ -2778,7 +2830,8 @@
     style: StyleDirective,
     model: ModelDirective,
     text: TextDirective,
-    html: HtmlDirective
+    html: HtmlDirective,
+    show: ShowDirective
   };
 
   /**
@@ -3026,10 +3079,15 @@
     return new TemplateResult( strings, values, 'html', templateProcessor );
   }
 
+  function svg( strings, ...values ){
+    return new SVGTemplateResult( strings, values, 'svg', templateProcessor );
+  }
+
   assign( html, {
     unsafe: unsafeHTML,
     repeat,
-    bind
+    bind,
+    svg
   });
 
   function litRender( result, container, options ){
@@ -3616,7 +3674,7 @@
     }
   });
 
-  Hu.version = '1.0.0-bata.3';
+  Hu.version = '1.0.0-bata.4';
 
   var initAttributeChangedCallback = propsMap => function( name, oldValue, value ){
     if( value === oldValue ) return;
@@ -3728,6 +3786,25 @@
     }
   }
 
+  const util = create( null );
+
+  assign( util, {
+    addEvent: addEventListener,
+    removeEvent: removeEventListener,
+    triggerEvent,
+    each,
+    isPlainObject,
+    isEmptyObject,
+    isPrimitive,
+    isEqual,
+    isString,
+    isObject,
+    isFunction,
+    isSymbol,
+    uid: uid$1,
+    cached
+  });
+
   const otherHu = inBrowser ? window.Hu
                             : undefined;
 
@@ -3745,7 +3822,8 @@
     render: render$1,
     html,
     nextTick,
-    observable
+    observable,
+    util
   });
 
   return Hu;
