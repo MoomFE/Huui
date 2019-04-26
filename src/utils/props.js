@@ -15,7 +15,7 @@ export default options => {
     }
 
     if( isPlainObject( options ) ){
-
+      props[ name ] = options;
     }else{
       props[ name ] = {
         type: getType( options ),
