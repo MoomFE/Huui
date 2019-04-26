@@ -1,4 +1,5 @@
 export const {
   html,
-  util
+  util,
+  observable
 } = Hu;
