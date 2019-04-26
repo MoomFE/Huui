@@ -6,7 +6,6 @@
   position: absolute;
   border-radius: 100px;
   background-color: currentColor;
-  animation-name: cloud;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 
@@ -33,15 +32,30 @@
 
 @keyframes cloud{
   0% {
-    transform: translate3d( 0px, 0, 0 );
+    transform: translate3d( 0%, 0, 0 );
   }
   25% {
-    transform: translate3d( -60px, 0, 0 );
+    transform: translate3d( -40%, 0, 0 );
   }
   75% {
-    transform: translate3d( 120px, 0, 0 );
+    transform: translate3d( 80%, 0, 0 );
   }
   100% {
-    transform: translate3d( 0px, 0, 0 );
+    transform: translate3d( 0%, 0, 0 );
+  }
+}
+
+@keyframes cloud-reverse{
+  0% {
+    transform: translate3d( 0%, 0, 0 );
+  }
+  25% {
+    transform: translate3d( 80%, 0, 0 );
+  }
+  75% {
+    transform: translate3d( -40%, 0, 0 );
+  }
+  100% {
+    transform: translate3d( 0%, 0, 0 );
   }
 }
