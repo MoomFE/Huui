@@ -6,20 +6,17 @@
 import css from './index.scss';
 import render from '../../utils/render';
 import { html } from '../../shared/global/Hu/index';
+import props from '../../utils/props';
 
 
 Hu.define( 'hu-gradient-text', {
-  props: {
-    from: {
-      type: String,
-      default: '#279f76'
-    },
-    to: {
-      type: String,
-      default: '#F4A460'
-    },
-    text: String
-  },
+
+  props: props({
+    from: '#279f76',
+    to: '#F4A460',
+    text: ''
+  }),
+
   render: render({
     css,
     html( html ){
@@ -32,6 +29,7 @@ Hu.define( 'hu-gradient-text', {
       `;
     }
   }),
+
   computed: {
     svg( hu ){
       return html`
@@ -47,4 +45,5 @@ Hu.define( 'hu-gradient-text', {
       `;
     }
   }
+
 });

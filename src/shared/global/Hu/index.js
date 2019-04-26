@@ -1,3 +1,4 @@
 export const {
-  html
+  html,
+  util
 } = Hu;
