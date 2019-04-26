@@ -1,9 +1,9 @@
 import css from './index.scss';
-import random from "../../../../utils/random";
-import render from "../../../../utils/render";
+import define from '../../../../utils/define';
+import random from '../../../../utils/random';
 
 
-Hu.define( 'hu-clouds-item', {
+define( 'clouds-item', {
 
   data(){
     const width = random( 80, 150 );
@@ -21,11 +21,11 @@ Hu.define( 'hu-clouds-item', {
     };
   },
 
-  render: render({
+  render: {
     css,
     html( html ){
       return html`<div :style=${ this.$data }></div>`;
     }
-  })
+  }
 
 });

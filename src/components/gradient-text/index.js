@@ -4,31 +4,28 @@
  */
 
 import css from './index.scss';
-import render from '../../utils/render';
+import define from '../../utils/define';
 import { html } from '../../shared/global/Hu/index';
-import props from '../../utils/props';
 
 
-Hu.define( 'hu-gradient-text', {
+define( 'gradient-text', {
 
-  props: props({
+  props: {
     from: '#279f76',
     to: '#F4A460',
     text: ''
-  }),
+  },
 
-  render: render({
+  render: {
     css,
-    html( html ){
-      const hu = this;
-
+    html(){
       return html`
-        <div text=${ hu.text }>
-          ${ hu.svg }
+        <div text=${ this.text }>
+          ${ this.svg }
         </div>
       `;
     }
-  }),
+  },
 
   computed: {
     svg( hu ){
