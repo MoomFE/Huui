@@ -31,7 +31,7 @@ define( 'clouds', {
     },
     clouds({ length }){
       return Array.apply( null, { length } ).map(() => {
-        return html`<hu-clouds-item/>`;
+        return html`<hu-clouds-item></hu-clouds-item>`;
       });
     }
   },

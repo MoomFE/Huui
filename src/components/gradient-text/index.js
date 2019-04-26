@@ -48,7 +48,7 @@ define( 'gradient-text', {
       const proportion = length > 1 ? 100 / ( length - 1 ) : 0;
 
       return stops.map(( color, index ) => {
-        return svg`<stop stop-color=${ color } offset="${ proportion * index }%"/>`;
+        return svg`<stop stop-color=${ color } offset="${ proportion * index }%"></stop>`;
       });
     },
     svg({ stops, text }){
