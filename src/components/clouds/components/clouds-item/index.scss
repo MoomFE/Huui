@@ -5,7 +5,7 @@
 :host > div{
   position: absolute;
   border-radius: 100px;
-  background-color: #FFF;
+  background-color: currentColor;
   animation-name: cloud;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
