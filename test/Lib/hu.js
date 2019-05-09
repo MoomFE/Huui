@@ -1,5 +1,5 @@
 /*!
- * Hu.js v1.0.0-bata.6
+ * Hu.js v1.0.0-bata.7
  * https://github.com/MoomFE/Hu
  * 
  * (c) 2018-present Wei Zhang
@@ -3207,7 +3207,19 @@
     return freeze( refs );
   };
 
+  /**
+   * 已经初始化过样式表的组件名称
+   */
+  const styleRendered = new Set();
+
   var prepareTemplateStyles = ( style, name ) => {
+    // 已经初始化过样式表的组件不再第二次初始化
+    if( styleRendered.has( name ) ){
+      return;
+    }
+
+    styleRendered.add( name );
+
     const root = document.createElement('div');
     const content = document.createElement('div');
 
@@ -3786,7 +3798,7 @@
     }
   });
 
-  Hu.version = '1.0.0-bata.6';
+  Hu.version = '1.0.0-bata.7';
 
   var initAttributeChangedCallback = propsMap => function( name, oldValue, value ){
     if( value === oldValue ) return;
