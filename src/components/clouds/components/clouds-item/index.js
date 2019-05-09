@@ -1,4 +1,4 @@
-import css from './index.scss';
+import styles from './index.scss';
 import define from '../../../../utils/define';
 import random from '../../../../utils/random';
 
@@ -21,11 +21,9 @@ define( 'clouds-item', {
     };
   },
 
-  render: {
-    css,
-    html( html ){
-      return html`<div :style=${ this.$data }></div>`;
-    }
+  styles,
+  render( html ){
+    return html`<div :style=${ this.$data }></div>`;
   }
 
 });

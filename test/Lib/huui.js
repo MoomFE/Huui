@@ -44,24 +44,6 @@
     ]);
   }
 
-  /**
-   * 用于为 Hu.js 实例选项的 render 选项创建一个 css 和 html 分离的环境
-   * 避免根节点不确定情况下, 到处拼接 css 字符串的问题
-   */
-  var initRender = options => function( html ){
-    const result = [];
-
-    if( options.css ) result.push(
-      html`<style>${ options.css }</style>`
-    );
-
-    if( options.html ) result.push(
-      apply( options.html, this, arguments )
-    );
-
-    return result;
-  };
-
   const {
     floor,
     random,
@@ -88,7 +70,6 @@
 
   var util = create$1({
     create: create$1,
-    render: initRender,
     random: random$1,
     capitalize
   });
@@ -112,7 +93,7 @@
     }
   }
 
-  var css = ":host>div{display:inline-block;position:relative}:host>div:before{content:attr(text);white-space:nowrap;color:transparent}:host>div>svg{width:100%;height:100%;position:absolute;top:0;left:0}";
+  var styles = ":host>div{display:inline-block;position:relative}:host>div:before{content:attr(text);white-space:nowrap;color:transparent}:host>div>svg{width:100%;height:100%;position:absolute;top:0;left:0}";
 
   const {
     html,
@@ -160,19 +141,13 @@
 
   var define = ( name, options ) => {
     let props = options.props;
-    let render = options.render;
 
     if( props ){
       props = initProps( props );
     }
 
-    if( render ){
-      render = initRender( render );
-    }
-
     options = assign({}, options, {
-      props: props,
-      render: render
+      props: props
     });
 
     Hu.define( 'hu-' + name, options );
@@ -197,11 +172,9 @@
       text: ''
     },
 
-    render: {
-      css,
-      html(){
-        return html`<div text=${ this.text }>${ this.svg }</div>`;
-      }
+    styles,
+    render(){
+      return html`<div text=${ this.text }>${ this.svg }</div>`;
     },
 
     computed: {
@@ -233,7 +206,7 @@
 
   });
 
-  var css$1 = "*,:after,:before{box-sizing:border-box}:host>div{position:absolute;border-radius:100px;background-color:currentColor;animation-timing-function:linear;animation-iteration-count:infinite}:host>div:after,:host>div:before{content:\"\";position:absolute;background-color:inherit}:host>div:before{width:54.54545%;height:150%;top:-75%;right:15.15152%;border-radius:200px}:host>div:after{width:30.30303%;height:83.33333%;top:-41.66667%;left:15.15152%;border-radius:100px}@keyframes cloud{0%{transform:translateZ(0)}25%{transform:translate3d(-40%,0,0)}75%{transform:translate3d(80%,0,0)}to{transform:translateZ(0)}}@keyframes cloud-reverse{0%{transform:translateZ(0)}25%{transform:translate3d(80%,0,0)}75%{transform:translate3d(-40%,0,0)}to{transform:translateZ(0)}}";
+  var styles$1 = "*,:after,:before{box-sizing:border-box}:host>div{position:absolute;border-radius:100px;background-color:currentColor;animation-timing-function:linear;animation-iteration-count:infinite}:host>div:after,:host>div:before{content:\"\";position:absolute;background-color:inherit}:host>div:before{width:54.54545%;height:150%;top:-75%;right:15.15152%;border-radius:200px}:host>div:after{width:30.30303%;height:83.33333%;top:-41.66667%;left:15.15152%;border-radius:100px}@keyframes cloud{0%{transform:translateZ(0)}25%{transform:translate3d(-40%,0,0)}75%{transform:translate3d(80%,0,0)}to{transform:translateZ(0)}}@keyframes cloud-reverse{0%{transform:translateZ(0)}25%{transform:translate3d(80%,0,0)}75%{transform:translate3d(-40%,0,0)}to{transform:translateZ(0)}}";
 
   define( 'clouds-item', {
 
@@ -253,16 +226,14 @@
       };
     },
 
-    render: {
-      css: css$1,
-      html( html ){
-        return html`<div :style=${ this.$data }></div>`;
-      }
+    styles: styles$1,
+    render( html ){
+      return html`<div :style=${ this.$data }></div>`;
     }
 
   });
 
-  var css$2 = ":host>div{width:100%;height:100%;position:absolute;top:0;left:0;pointer-events:none;overflow:hidden}";
+  var styles$2 = ":host>div{width:100%;height:100%;position:absolute;top:0;left:0;pointer-events:none;overflow:hidden}";
 
   define( 'clouds', {
 
@@ -295,11 +266,9 @@
       }
     },
 
-    render: {
-      css: css$2,
-      html(){
-        return html`<div style="color: ${ this.color }">${ this.clouds }</div>`;
-      }
+    styles: styles$2,
+    render(){
+      return html`<div style="color: ${ this.color }">${ this.clouds }</div>`;
     }
 
   });

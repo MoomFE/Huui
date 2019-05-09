@@ -1,5 +1,5 @@
 /*!
- * Hu.js v1.0.0-bata.4
+ * Hu.js v1.0.0-bata.6
  * https://github.com/MoomFE/Hu
  * 
  * (c) 2018-present Wei Zhang
@@ -625,27 +625,40 @@
 
     const {
       methods,
+      globalMethods,
       data,
       computed,
       watch
     } = userOptions;
 
-    initMethods( methods, options );
+    initMethods( methods, options, 'methods' );
+    initMethods( globalMethods, options, 'globalMethods' );
     initData( isCustomElement, data, options );
     initComputed( computed, options );
     initWatch( watch, options );
+    isCustomElement && initStyles( userOptions.styles, options );
 
-    if( !isMixin && mixins ){
-      for( let mixin of mixins ){
-        initState( isCustomElement, mixin, options, null, true );
+    if( !isMixin ){
+      // 处理 Mixins
+      if( mixins ){
+        for( let mixin of mixins ){
+          initState( isCustomElement, mixin, options, null, true );
+        }
+      }
+      // 处理自定义元素的样式
+      if( isCustomElement && options.styles ){
+        const style = document.createElement('style');
+
+        style.textContent = options.styles.join('');
+        options.styles = style;
       }
     }
   }
 
 
-  function initMethods( userMethods, options ){
+  function initMethods( userMethods, options, name ){
     if( userMethods ){
-      const methods = options.methods || ( options.methods = {} );
+      const methods = options[ name ] || ( options[ name ] = {} );
 
       each( userMethods, ( key, method ) => {
         if( !methods[ key ] && isFunction( method ) ){
@@ -699,6 +712,17 @@
     }
   }
 
+  function initStyles( userStyles, options ){
+    let stylesIsString = isString( userStyles );
+
+    if( stylesIsString || isArray( userStyles ) ){
+      const styles = options.styles || ( options.styles = [] );
+
+      if( stylesIsString ) styles.splice( 0, 0, userStyles );
+      else styles.splice( 0, 0, ...userStyles );
+    }
+  }
+
   const inBrowser = typeof window !== 'undefined';
   const UA = inBrowser && window.navigator.userAgent.toLowerCase();
   const isIOS = UA && /iphone|ipad|ipod|ios/.test( UA );
@@ -719,6 +743,9 @@
     window.addEventListener( 'test-passive', null, options );
 
   }catch(e){}
+
+
+  const hasShadyCss = typeof window.ShadyCSS !== 'undefined' && !window.ShadyCSS.nativeShadow;
 
   function initOther( isCustomElement, userOptions, options, mixins, isMixin ){
 
@@ -1039,6 +1066,52 @@
       });
 
       return lazy;
+    }
+  }
+
+  /**
+   * 渲染函数的 Watcher 缓存
+   */
+  const renderWatcherCache = new WeakMap();
+
+  /**
+   * Render 渲染方法调用堆栈
+   */
+  const renderStack = [];
+
+  /**
+   * 存放渲染时收集到的属性监听的解绑方法
+   * 用于下次渲染时的解绑
+   */
+  const bindDirectiveCacheMap = new WeakMap();
+
+  /**
+   * 存放渲染时收集到的双向数据绑定信息
+   */
+  const modelDirectiveCacheMap = new WeakMap();
+
+  /**
+   * 解绑上次渲染时收集到的属性监听和双向数据绑定信息
+   */
+  function unWatchAllDirectiveCache( container ){
+    // 解绑上次渲染时收集到的属性监听
+    unWatchDirectiveCache( bindDirectiveCacheMap, container, unWatch => {
+      return unWatch();
+    });
+    // 解绑上次渲染时收集到的双向数据绑定信息
+    unWatchDirectiveCache( modelDirectiveCacheMap, container, modelPart => {
+      return modelPart.options.length = 0;
+    });
+  }
+
+  function unWatchDirectiveCache( cache, container, fn ){
+    const options = cache.get( container );
+
+    if( options ){
+      for( let option of options ){
+        fn( option );
+      }
+      options.length = 0;
     }
   }
 
@@ -1757,39 +1830,6 @@
    * subject to an additional IP rights grant found at
    * http://polymer.github.io/PATENTS.txt
    */
-  /**
-   * The default TemplateFactory which caches Templates keyed on
-   * result.type and result.strings.
-   */
-  function templateFactory(result) {
-      let templateCache = templateCaches.get(result.type);
-      if (templateCache === undefined) {
-          templateCache = {
-              stringsArray: new WeakMap(),
-              keyString: new Map()
-          };
-          templateCaches.set(result.type, templateCache);
-      }
-      let template = templateCache.stringsArray.get(result.strings);
-      if (template !== undefined) {
-          return template;
-      }
-      // If the TemplateStringsArray is new, generate a key from the strings
-      // This key is shared between all templates with identical content
-      const key = result.strings.join(marker);
-      // Check if we already have a Template for this key
-      template = templateCache.keyString.get(key);
-      if (template === undefined) {
-          // If we have not seen this key before, create a new Template
-          template = new Template(result, result.getTemplateElement());
-          // Cache the Template for this key
-          templateCache.keyString.set(key, template);
-      }
-      // Cache all future queries for this TemplateStringsArray
-      templateCache.stringsArray.set(result.strings, template);
-      return template;
-  }
-  const templateCaches = new Map();
 
   /**
    * @license
@@ -1804,37 +1844,103 @@
    * subject to an additional IP rights grant found at
    * http://polymer.github.io/PATENTS.txt
    */
-  const parts = new WeakMap();
-  /**
-   * Renders a template to a container.
-   *
-   * To update a container with new values, reevaluate the template literal and
-   * call `render` with the new result.
-   *
-   * @param result a TemplateResult created by evaluating a template tag like
-   *     `html` or `svg`.
-   * @param container A DOM parent to render to. The entire contents are either
-   *     replaced, or efficiently updated if the same result type was previous
-   *     rendered there.
-   * @param options RenderOptions for the entire render tree rendered to this
-   *     container. Render options must *not* change between renders to the same
-   *     container, as those changes will not effect previously rendered DOM.
-   */
-  const render = (result, container, options) => {
-      let part = parts.get(container);
-      if (part === undefined) {
-          removeNodes(container, container.firstChild);
-          parts.set(container, part = new NodePart(Object.assign({ templateFactory }, options)));
-          part.appendInto(container);
-      }
-      part.setValue(result);
-      part.commit();
-  };
 
   // IMPORTANT: do not change the property name or the assignment expression.
   // This line will be used in regexes to search for lit-html usage.
   // TODO(justinfagnani): inject version number at build time
   inBrowser && (window['litHtmlVersions'] || (window['litHtmlVersions'] = [])).push('1.0.0');
+
+  /**
+   * 所有模板类型的缓存对象
+   */
+  const templateCaches = create( null );
+
+  var defaultTemplateFactory = result => {
+    /**
+     * 当前模板类型的缓存对象
+     *  - 'html'
+     *  - 'svg'
+     */
+    let templateCache = templateCaches[ result.type ];
+
+    // 如果没有获取到当前模板类型的缓存对象
+    // 则进行创建并进行缓存
+    if( !templateCache ){
+      templateCaches[ result.type ] = templateCache = {
+        stringsArray: new WeakMap(),
+        keyString: create( null )
+      };
+    }
+
+    /**
+     * 当前模板字面量对应的处理模板
+     */
+    let template = templateCache.stringsArray.get( result.strings );
+
+    // 获取到了值, 说明之前处理过该模板字面量, 直接返回对应模板
+    if( template ){
+      return template;
+    }
+
+    /**
+     * 使用随机的密钥连接模板字面量, 连接后完全相同的模板字面量字符串会公用同一个模板
+     */
+    const key = result.strings.join( marker );
+
+    // 尝试获取当前模板字面量字符串对应的模板
+    template = templateCache.keyString[ key ];
+
+    // 如果没有获取到当前模板字面量字符串对应的模板
+    // 则进行创建并进行缓存
+    if( !template ){
+      templateCache.keyString[ key ] = template = new Template(
+        result,
+        result.getTemplateElement()
+      );
+    }
+
+    // 缓存当前模板
+    templateCache.stringsArray.set( result.strings, template );
+
+    // 返回对应模板
+    return template;
+  };
+
+  const parts = new WeakMap();
+
+  function basicRender( result, container, options ){
+    // 尝试获取上次创建的节点对象
+    let part = parts.get( container );
+
+    // 首次在该目标对象下进行渲染, 对节点对象进行创建
+    if( !part ){
+      // 移除需要渲染的目标对象下的所有内容
+      removeNodes( container, container.firstChild );
+
+      // 创建节点对象
+      parts.set(
+        container,
+        part = new NodePart(
+          assign(
+            { templateFactory: defaultTemplateFactory }, options
+          )
+        )
+      );
+      // 将节点对象添加至目标元素
+      part.appendInto( container );
+    }
+
+    part.setValue( result );
+    part.commit();
+  }
+
+
+  var render = ( result, container, options ) => {
+    unWatchAllDirectiveCache( container );
+    renderStack.push( container );
+    basicRender( result, container, options );
+    renderStack.pop();
+  };
 
   class AttributeCommitter{
 
@@ -1936,12 +2042,15 @@
     elem.addEventListener( type, listener, options );
   };
 
+  const definedCustomElement = new Map();
+
   class BasicEventDirective{
 
     constructor( element, type, modifierKeys ){
       this.elem = element;
       this.type = type;
       this.opts = initEventOptions( modifierKeys );
+      this.isCE = definedCustomElement.get( element.nodeName.toLowerCase() );
     }
 
     setValue( listener ){
@@ -1958,33 +2067,43 @@
 
       // 新的事件绑定与旧的事件绑定不一致
       if( listener !== oldListener ){
-        const { elem, type, opts } = this;
-        const { options, modifiers, once, add = true } = opts;
+        const { elem, type, opts, isCE } = this;
+        const { options, modifiers, once, native, add = true } = opts;
 
         // 移除旧的事件绑定
         // once 修饰符绑定的事件只允许在首次运行回调后自行解绑
         if( oldListener && !once ){
-          removeEventListener( elem, type, this.value, options );
+          if( isCE && !native ){
+            elem.$off( type, listener );
+          }else{
+            removeEventListener( elem, type, this.value, options );
+          }
         }
         // 添加新的事件绑定
         if( listener && add ){
           // once 修饰符绑定的事件不允许修改
           if( once ) opts.add = false;
-          // 生成绑定的方法
-          const value = this.value = function callback( event ){
-            // 修饰符检测
-            for( let modifier of modifiers ){
-              if( modifier( elem, event, modifiers ) === false ) return;
-            }
-            // 只执行一次
-            if( once ){
-              removeEventListener( elem, type, callback, options );
-            }
-            // 修饰符全部检测通过, 执行用户传入方法
-            apply( listener, this, arguments );
-          };
-          // 注册事件
-          addEventListener( elem, type, value, options );
+
+          // 绑定的对象是通过 Hu 注册的自定义元素
+          if( isCE && !native ){
+            elem[ once ? '$once' : '$on' ]( type, listener );
+          }else{
+            // 生成绑定的方法
+            const value = this.value = function callback( event ){
+              // 修饰符检测
+              for( let modifier of modifiers ){
+                if( modifier( elem, event, modifiers ) === false ) return;
+              }
+              // 只执行一次
+              if( once ){
+                removeEventListener( elem, type, callback, options );
+              }
+              // 修饰符全部检测通过, 执行用户传入方法
+              apply( listener, this, arguments );
+            };
+            // 注册事件
+            addEventListener( elem, type, value, options );
+          }
         }
       }
     }
@@ -2002,10 +2121,11 @@
 
     modifiers.keys = modifierKeys;
 
-    const { once, passive, capture } = options;
+    const { once, passive, capture, native } = options;
 
     return {
       once,
+      native,
       options: passive ? { passive, capture } : capture,
       modifiers
     };
@@ -2017,7 +2137,8 @@
   const eventOptions = {
     once: true,
     capture: true,
-    passive: supportsPassive
+    passive: supportsPassive,
+    native: true
   };
 
   /**
@@ -2558,22 +2679,6 @@
     target.dispatchEvent( event );
   };
 
-  /**
-   * Render 渲染方法调用堆栈
-   */
-  const renderStack = [];
-
-  /**
-   * 存放渲染时收集到的属性监听的解绑方法
-   * 用于下次渲染时的解绑
-   */
-  const bindDirectiveCacheMap = new WeakMap();
-
-  /**
-   * 存放渲染时收集到的双向数据绑定信息
-   */
-  const modelDirectiveCacheMap = new WeakMap();
-
   class ModelDirective{
 
     constructor( element ){
@@ -3038,9 +3143,6 @@
     const isObserve = observeProxyMap.has( proxy );
 
     return ( part, deep = false ) => {
-      if( part instanceof NodePart ){
-        throw new Error('Hu.html.bind 指令方法只能在元素属性绑定中使用 !');
-      }
 
       const setValue = ( value ) => {
         part.setValue( value );
@@ -3060,7 +3162,7 @@
           deep
         }
       );
-    
+
       // 当前渲染元素
       const rendering = renderStack[ renderStack.length - 1 ];
       // 当前渲染元素属性监听解绑方法集
@@ -3090,98 +3192,68 @@
     svg
   });
 
-  function litRender( result, container, options ){
-
-    unWatchAllDirectiveCache( container );
-
-    renderStack.push( container );
-
-    render( result, container, options );
-
-    renderStack.pop();
-  }
-
-
-  /**
-   * 解绑上次渲染时收集到的属性监听和双向数据绑定信息
-   */
-  function unWatchAllDirectiveCache( container ){
-    // 解绑上次渲染时收集到的属性监听
-    unWatchDirectiveCache( bindDirectiveCacheMap, container, unWatch => {
-      return unWatch();
-    });
-    // 解绑上次渲染时收集到的双向数据绑定信息
-    unWatchDirectiveCache( modelDirectiveCacheMap, container, modelPart => {
-      return modelPart.options.length = 0;
-    });
-  }
-
-  function unWatchDirectiveCache( cache, container, fn ){
-    const options = cache.get( container );
-
-    if( options ){
-      for( let option of options ){
-        fn( option );
-      }
-      options.length = 0;
-    }
-  }
-
-  /**
-   * 渲染函数的 Watcher 缓存
-   */
-  const renderWatcherCache = new WeakMap();
-
-  /** 迫使 Hu 实例重新渲染 */
-  var initForceUpdate = ( name, target, targetProxy ) => {
-    /** 当前实例的实例配置 */
-    const userRender = optionsMap[ name ].render;
-
-    if( userRender ){
-      // 创建当前实例渲染方法的 Watcher
-      const watcher = new Watcher(() => {
-        const $el = target.$el;
-
-        if( $el ){
-          litRender( userRender.call( targetProxy, html ), $el );
-          target.$refs = getRefs( $el );
-        }
-      });
-
-      // 缓存当前实例渲染方法的 Watcher
-      renderWatcherCache.set( targetProxy, watcher );
-
-      target.$forceUpdate = watcher.get;
-    }else{
-      target.$forceUpdate = noop;
-    }
-  };
-
-  /**
-   * 清空 render 方法收集到的依赖
-   */
-  function removeRenderDeps( targetProxy ){
-    const watcher = renderWatcherCache.get( targetProxy );
-
-    if( watcher ){
-      watcher.clean();
-    }
-  }
-
-  function getRefs( root ){
+  var getRefs = root => {
     const refs = {};
     const elems = root.querySelectorAll('[ref]');
 
     if( elems.length ){
-      Array.from( elems ).forEach( elem => {
+      slice.call( elems ).forEach( elem => {
         const name = elem.getAttribute('ref');
         refs[ name ] = refs[ name ] ? [].concat( refs[ name ], elem )
                                     : elem;
       });
     }
 
-    return Object.freeze( refs );
-  }
+    return freeze( refs );
+  };
+
+  var prepareTemplateStyles = ( style, name ) => {
+    const root = document.createElement('div');
+    const content = document.createElement('div');
+
+    root.content = content;
+    content.appendChild( style );
+
+    window.ShadyCSS.ScopingShim.prepareTemplateStyles( root, name );
+  };
+
+  /** 迫使 Hu 实例重新渲染 */
+  var initForceUpdate = ( name, target, targetProxy, isCustomElement ) => {
+    /** 当前实例实例选项 */
+    const options = optionsMap[ name ];
+    /** 当前实例的渲染方法 */
+    const userRender = options.render;
+    /** 当前实例的样式 */
+    const userStyles = isCustomElement && options.styles && options.styles.cloneNode( true );
+    /** 是否已经渲染过当前实例的样式 */
+    let canRenderedStyles = !!userStyles;
+
+    /** 当前实例渲染方法的 Watcher */
+    const renderWatcher = new Watcher(() => {
+      const el = target.$el;
+
+      if( el ){
+        // 执行用户渲染方法
+        if( userRender ){
+          render( userRender.call( targetProxy, html ), el );
+        }
+        // 添加自定义元素样式
+        if( canRenderedStyles ){
+          canRenderedStyles = false;
+
+          if( hasShadyCss ) prepareTemplateStyles( userStyles, name );
+          else el.appendChild( userStyles );
+        }
+        // 获取 refs 引用信息
+        target.$refs = getRefs( el );
+      }
+    });
+
+    // 缓存当前实例渲染方法的 Watcher
+    renderWatcherCache.set( targetProxy, renderWatcher );
+    // 返回收集依赖方法
+    target.$forceUpdate = renderWatcher.get;
+  };
 
   /**
    * 在下次 DOM 更新循环结束之后执行回调
@@ -3253,12 +3325,25 @@
   const eventMap = new WeakMap();
   const onceMap = new WeakMap();
 
+  function processing( handler ){
+    return function(){
+      let hu;
+
+      if( ( hu = this ) instanceof HuConstructor || ( hu = hu.$hu ) instanceof HuConstructor ){
+        apply( handler, hu, arguments );
+      }
+
+      return this;
+    };
+  }
+
   function initEvents( targetProxy ){
     const events = create( null );
     eventMap.set( targetProxy, events );
   }
 
-  function $on( type, fn ){
+
+  var $on = processing(function( type, fn ){
     if( isArray( type ) ){
       for( let event of type ) this.$on( event, fn );
     }else{
@@ -3269,20 +3354,18 @@
 
       fns.push( fn );
     }
-    return this;
-  }
+  });
 
-  function $once( type, fn ){
+  const $once = processing(function( type, fn ){
     function once(){
       this.$off( type, once );
       apply( fn, this, arguments );
     }
     onceMap.set( once, fn );
     this.$on( type, once );
-    return this;
-  }
+  });
 
-  function $off( type, fn ){
+  const $off = processing(function( type, fn ){
     // 解绑所有事件
     if( !arguments.length ){
       return initEvents( this ), this;
@@ -3318,9 +3401,9 @@
     }
 
     return this;
-  }
+  });
 
-  function $emit( type ){
+  const $emit = processing(function( type ){
     const events = eventMap.get( this );
     const fns = events[ type ];
 
@@ -3334,32 +3417,32 @@
     }
 
     return this;
-  }
+  });
 
-  var injectionToLit = /**
+  var injectionToHu = /**
    * 在 $hu 上建立对象的映射
    * 
-   * @param {{}} litTarget $hu 实例
+   * @param {{}} huTarget $hu 实例
    * @param {string} key 对象名称
    * @param {any} value 对象值
    * @param {function} set 属性的 getter 方法, 若传值, 则视为使用 Object.defineProperty 对值进行定义
    * @param {function} get 属性的 setter 方法
    */
-  ( litTarget, key, value, set, get ) => {
+  ( huTarget, key, value, set, get ) => {
 
     // 首字母为 $ 则不允许映射到 $hu 实例中去
     if( !isSymbolOrNotReserved( key ) ) return;
 
     // 若在 $hu 下有同名变量, 则删除
-    has( litTarget, key ) && delete litTarget[ key ];
+    has( huTarget, key ) && delete huTarget[ key ];
 
     // 使用 Object.defineProperty 对值进行定义
     if( set ){
-      defineProperty$1( litTarget, key, set, get );
+      defineProperty$1( huTarget, key, set, get );
     }
     // 直接写入到 $hu 上
     else{
-      litTarget[ key ] = value;
+      huTarget[ key ] = value;
     }
 
   };
@@ -3420,13 +3503,24 @@
 
     each( computed, ( name, computed ) => {
       appendComputed( name, computed );
-      injectionToLit(
+      injectionToHu(
         target, name, 0,
         () => computedTargetProxyInterceptor[ name ],
         value => computedTargetProxyInterceptor[ name ] = value
       );
     });
   }
+
+  /**
+   * 清空 render 方法收集到的依赖
+   */
+  var removeRenderDeps = targetProxy => {
+    const watcher = renderWatcherCache.get( targetProxy );
+
+    if( watcher ){
+      watcher.clean();
+    }
+  };
 
   function $destroy(){
 
@@ -3462,12 +3556,12 @@
   }
 
   class HuConstructor{
-    constructor( name ){
+    constructor( name, isCustomElement ){
       /** 当前实例观察者对象 */
       const targetProxy = observe( this, observeHu );
 
       // 初始化 $forceUpdate 方法
-      initForceUpdate( name, this, targetProxy );
+      initForceUpdate( name, this, targetProxy, isCustomElement );
       // 初始化事件相关
       initEvents( targetProxy );
     }
@@ -3537,16 +3631,34 @@
    * @param {{}} target 
    * @param {{}} targetProxy 
    */
-  function initMethods$1( options, target, targetProxy ){
-
+  function initMethods$1(
+    isCustomElement,
+    root,
+    {
+      methods,
+      globalMethods
+    },
+    target,
+    targetProxy
+  ){
     const methodsTarget = target.$methods = create( null );
+    const globalMethodsTarget = target.$globalMethods = create( null );
 
-    each( options.methods, ( name, value ) => {
+    injectionMethods( methodsTarget, methods, target, targetProxy );
+    injectionMethods( globalMethodsTarget, globalMethods, target, targetProxy, ( name, method ) => {
+      isCustomElement && isSymbolOrNotReserved( name ) && (
+        root[ name ] = method
+      );
+    });
+  }
+
+  function injectionMethods( methodsTarget, methods, target, targetProxy, callback ){
+    each( methods, ( name, value ) => {
       const method = methodsTarget[ name ] = value.bind( targetProxy );
 
-      injectionToLit( target, name, method );
+      injectionToHu( target, name, method );
+      callback && callback( name, method );
     });
-
   }
 
   /**
@@ -3576,7 +3688,7 @@
     const dataTargetProxy = target.$data = observe( dataTarget );
 
     each( dataTarget, name => {
-      injectionToLit(
+      injectionToHu(
         target, name, 0,
         () => dataTargetProxy[ name ],
         value => dataTargetProxy[ name ] = value
@@ -3631,11 +3743,11 @@
   function init( isCustomElement, root, name, options, userOptions ){
 
     /** 当前实例对象 */
-    const target = new HuConstructor( name );
+    const target = new HuConstructor( name, isCustomElement );
     /** 当前实例观察者对象 */
     const targetProxy = observeMap.get( target ).proxy;
 
-    // 
+    // 使用自定义元素创建的实例
     if( isCustomElement ){
       target.$el = root.attachShadow({ mode: 'open' });
       target.$customElement = root;
@@ -3643,7 +3755,7 @@
 
     initOptions$1( isCustomElement, name, target, userOptions );
     initProps$1( isCustomElement, root, options, target, targetProxy );
-    initMethods$1( options, target, targetProxy );
+    initMethods$1( isCustomElement, root, options, target, targetProxy );
     initData$1( options, target, targetProxy );
 
     // 运行 beforeCreate 生命周期方法
@@ -3674,7 +3786,7 @@
     }
   });
 
-  Hu.version = '1.0.0-bata.4';
+  Hu.version = '1.0.0-bata.6';
 
   var initAttributeChangedCallback = propsMap => function( name, oldValue, value ){
     if( value === oldValue ) return;
@@ -3718,8 +3830,13 @@
 
     infoTarget.isConnected = true;
 
-    // 如果是首次挂载, 需要运行 beforeMount 生命周期方法
+    // 是首次挂载
     if( !isMounted ){
+      // 挂载全局方法
+      each( $hu.$globalMethods, ( name, value ) => {
+        return this[ name ] = value;
+      });
+      // 运行 beforeMount 生命周期方法
       callLifecycle( $hu, 'beforeMount', options );
     }
 
@@ -3766,23 +3883,29 @@
       // 自定义元素位置被移动
       adoptedCallback: initAdoptedCallback( options ),
       // 自定义元素属性被更改
-      attributeChangedCallback: initAttributeChangedCallback( options.propsMap )
+      attributeChangedCallback: initAttributeChangedCallback( options.propsMap ),
+      // 自定义元素实例上的事件处理相关方法
+      $on,
+      $once,
+      $off
     });
 
     // 注册组件
     customElements.define( name, HuElement );
+    // 标记组件已注册
+    definedCustomElement.set( name, true );
   }
 
-  function render$1( result, container ){
+  function staticRender( result, container ){
     if( arguments.length > 1 ){
-      return litRender( result, container );
+      return render( result, container );
     }
 
     container = result;
 
     return function(){
       const result = apply( html, null, arguments );
-      return litRender( result, container );
+      return render( result, container );
     }
   }
 
@@ -3819,7 +3942,7 @@
 
   assign( Hu, {
     define,
-    render: render$1,
+    render: staticRender,
     html,
     nextTick,
     observable,

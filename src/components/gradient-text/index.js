@@ -3,7 +3,7 @@
  * https://isux.tencent.com/articles/svg-for-web
  */
 
-import css from './index.scss';
+import styles from './index.scss';
 import define from '../../utils/define';
 import { html } from '../../shared/global/Hu/index';
 import { svg } from '../../shared/global/Hu/html';
@@ -18,15 +18,13 @@ define( 'gradient-text', {
     text: ''
   },
 
-  render: {
-    css,
-    html(){
-      return html`
-        <div text=${ this.text }>
-          ${ this.svg }
-        </div>
-      `;
-    }
+  styles,
+  render(){
+    return html`
+      <div text=${ this.text }>
+        ${ this.svg }
+      </div>
+    `;
   },
 
   computed: {

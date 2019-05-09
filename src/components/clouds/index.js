@@ -1,5 +1,5 @@
 import './components/clouds-item/index';
-import css from './index.scss';
+import styles from './index.scss';
 import define from '../../utils/define';
 import random from '../../utils/random';
 import { html } from "../../shared/global/Hu/index";
@@ -36,13 +36,11 @@ define( 'clouds', {
     }
   },
 
-  render: {
-    css,
-    html(){
-      return html`
-        <div style="color: ${ this.color }">${ this.clouds }</div>
-      `;
-    }
+  styles,
+  render(){
+    return html`
+      <div style="color: ${ this.color }">${ this.clouds }</div>
+    `;
   }
 
 });
